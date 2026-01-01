@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, BookOpen, Briefcase, Brain, Home, Plus, X, Clock, Download, Calendar } from 'lucide-react';
-import { useStorage } from './hooks/useStorage';
+import { Heart, BookOpen, Briefcase, Brain, Home, Plus, X, Clock, Download, Calendar, Upload } from 'lucide-react';
+import { useIndexedDB } from './hooks/useIndexedDB';
 import DistractionBoard from './components/DistractionBoard';
 
 function App() {
-  const { entries, addEntry, removeEntry, clearCategory, exportData } = useStorage();
+  const { entries, addEntry, removeEntry, clearCategory, exportData, importData, isLoading } = useIndexedDB();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [availableDates, setAvailableDates] = useState([]);
+  const [showImportSuccess, setShowImportSuccess] = useState(false);
 
   useEffect(() => {
     // Get all available dates from localStorage
@@ -27,12 +28,48 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const jsonData = e.target?.result;
+      const success = await importData(jsonData);
+      if (success) {
+        setShowImportSuccess(true);
+        setTimeout(() => setShowImportSuccess(false), 3000);
+      } else {
+        alert('Failed to import data. Please check the file format.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const todayData = entries[selectedDate] || {};
   const totalCount = Object.values(todayData).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl text-slate-600 mb-4">Loading your board...</div>
+          <div className="w-8 h-8 border-4 border-slate-300 border-t-slate-700 rounded-full animate-spin mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="max-w-5xl mx-auto p-4 sm:p-6">
+        {/* Import Success Message */}
+        {showImportSuccess && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+            ✅ Data imported successfully! Your board has been restored.
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-slate-800 mb-2">Distraction Board</h1>
@@ -58,13 +95,25 @@ function App() {
               )}
             </div>
 
-            <button
-              onClick={handleExport}
-              className="ml-auto flex items-center gap-2 px-4 py-2 bg-slate-700 text-white text-sm rounded hover:bg-slate-800 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </button>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white text-sm rounded hover:bg-slate-800 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </button>
+              <label className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white text-sm rounded hover:bg-slate-700 transition-colors cursor-pointer">
+                <Upload className="w-4 h-4" />
+                Import
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImport}
+                  className="hidden"
+                />
+              </label>
+            </div>
           </div>
         </div>
 
@@ -84,7 +133,8 @@ function App() {
             <p><span className="font-medium text-slate-700">During work:</span> When a thought intrudes, capture it here in 1-2 sentences. Then immediately return to work.</p>
             <p><span className="font-medium text-slate-700">After work:</span> Review your board once daily. Sort each item: needs action, needs processing, or can let go.</p>
             <p><span className="font-medium text-slate-700">History:</span> Your entries are saved by date. Use the date picker to review or revisit past entries.</p>
-            <p><span className="font-medium text-slate-700">Export:</span> Download your complete history as a backup anytime.</p>
+            <p><span className="font-medium text-slate-700">Storage:</span> Data is stored in IndexedDB (more reliable than localStorage, works offline, persists across sessions).</p>
+            <p><span className="font-medium text-slate-700">Backup:</span> Export your data regularly as JSON backup. Use Import to restore if needed.</p>
             <p><span className="font-medium text-slate-700">Rule:</span> Capture = relief. Reviewing during work = sabotage. Trust the system.</p>
           </div>
         </div>
