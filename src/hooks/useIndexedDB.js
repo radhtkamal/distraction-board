@@ -156,6 +156,39 @@ export function useIndexedDB() {
     }
   };
 
+  const archiveEntries = async (entriesToArchive) => {
+    // Keep only entries not being archived
+    const archivedKeys = Object.keys(entriesToArchive);
+    const remainingEntries = {};
+    
+    Object.entries(entries).forEach(([date, dayEntries]) => {
+      if (!archivedKeys.includes(date)) {
+        remainingEntries[date] = dayEntries;
+      }
+    });
+
+    await saveEntries(remainingEntries);
+    
+    return {
+      exportedAt: new Date().toISOString(),
+      data: entriesToArchive,
+      archivedCount: Object.values(entriesToArchive).reduce(
+        (sum, dayEntries) =>
+          sum +
+          Object.values(dayEntries).reduce((s, arr) => s + (arr?.length || 0), 0),
+        0
+      ),
+    };
+  };
+
+  const mergeArchiveWithCurrent = async (archiveData) => {
+    const mergedEntries = {
+      ...archiveData,
+      ...entries,
+    };
+    await saveEntries(mergedEntries);
+  };
+
   return {
     entries,
     addEntry,
@@ -163,7 +196,10 @@ export function useIndexedDB() {
     clearCategory,
     exportData,
     importData,
+    archiveEntries,
+    mergeArchiveWithCurrent,
     isLoading,
   };
 }
+
 

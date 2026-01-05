@@ -1,19 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, BookOpen, Briefcase, Brain, Home, Plus, X, Clock, Download, Calendar, Upload } from 'lucide-react';
 import { useIndexedDB } from './hooks/useIndexedDB';
+import { useStorageQuota } from './hooks/useStorageQuota';
 import DistractionBoard from './components/DistractionBoard';
+import StorageQuotaBar from './components/StorageQuotaBar';
+import ArchiveModal from './components/ArchiveModal';
 
 function App() {
-  const { entries, addEntry, removeEntry, clearCategory, exportData, importData, isLoading } = useIndexedDB();
+  const { entries, addEntry, removeEntry, clearCategory, exportData, importData, archiveEntries, isLoading } = useIndexedDB();
+  const { quotaInfo, checkQuota, getArchivableEntries, calculateDataSize, archiveDays, setArchiveDays } = useStorageQuota();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [availableDates, setAvailableDates] = useState([]);
   const [showImportSuccess, setShowImportSuccess] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
 
   useEffect(() => {
     // Get all available dates from localStorage
     const dates = Object.keys(entries).sort().reverse();
     setAvailableDates(dates);
-  }, [entries]);
+    // Check quota after entries update
+    checkQuota();
+  }, [entries, checkQuota]);
 
   const handleExport = () => {
     const dataStr = JSON.stringify(exportData(), null, 2);
@@ -39,11 +46,35 @@ function App() {
       if (success) {
         setShowImportSuccess(true);
         setTimeout(() => setShowImportSuccess(false), 3000);
+        checkQuota(); // Re-check quota after import
       } else {
         alert('Failed to import data. Please check the file format.');
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleArchive = async (entriesToArchive, days) => {
+    const archivedData = await archiveEntries(entriesToArchive);
+    
+    // Auto-download the archived data
+    const dataStr = JSON.stringify(archivedData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `distraction-board-archive-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    // Show success message
+    setShowImportSuccess(true);
+    setTimeout(() => setShowImportSuccess(false), 3000);
+    
+    // Re-check quota after archiving
+    await checkQuota();
   };
 
   const todayData = entries[selectedDate] || {};
@@ -66,8 +97,18 @@ function App() {
         {/* Import Success Message */}
         {showImportSuccess && (
           <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-            ✅ Data imported successfully! Your board has been restored.
+            ✅ {selectedDate !== new Date().toISOString().split('T')[0] ? 'Data archived successfully!' : 'Data imported successfully! Your board has been restored.'}
           </div>
+        )}
+
+        {/* Storage Quota Bar */}
+        {!isLoading && (
+          <StorageQuotaBar
+            quotaInfo={quotaInfo}
+            onArchiveClick={() => setShowArchiveModal(true)}
+            calculateDataSize={calculateDataSize}
+            entries={entries}
+          />
         )}
 
         {/* Header */}
@@ -135,6 +176,7 @@ function App() {
             <p><span className="font-medium text-slate-700">History:</span> Your entries are saved by date. Use the date picker to review or revisit past entries.</p>
             <p><span className="font-medium text-slate-700">Storage:</span> Data is stored in IndexedDB (more reliable than localStorage, works offline, persists across sessions).</p>
             <p><span className="font-medium text-slate-700">Backup:</span> Export your data regularly as JSON backup. Use Import to restore if needed.</p>
+            <p><span className="font-medium text-slate-700">Archive:</span> When storage is full, archive old entries to free up space. Archives are downloaded automatically.</p>
             <p><span className="font-medium text-slate-700">Rule:</span> Capture = relief. Reviewing during work = sabotage. Trust the system.</p>
           </div>
         </div>
@@ -169,6 +211,17 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Archive Modal */}
+      <ArchiveModal
+        isOpen={showArchiveModal}
+        onClose={() => setShowArchiveModal(false)}
+        onArchive={handleArchive}
+        entries={entries}
+        getArchivableEntries={getArchivableEntries}
+        calculateDataSize={calculateDataSize}
+        defaultDays={archiveDays}
+      />
     </div>
   );
 }
