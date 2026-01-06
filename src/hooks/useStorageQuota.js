@@ -31,14 +31,24 @@ export function useStorageQuota() {
     try {
       if (navigator.storage && navigator.storage.estimate) {
         const estimate = await navigator.storage.estimate();
-        const usage = estimate.usage || 0;
-        const quota = estimate.quota || 0;
+        let usage = estimate.usage || 0;
+        let quota = estimate.quota || 0;
+
+        // iOS Safari fallback: if quota is not available, estimate based on usage
+        // Typically iOS PWAs get ~50MB of storage
+        if (quota === 0 || quota === undefined) {
+          console.warn(
+            "Storage quota not available, using estimated value for iOS"
+          );
+          quota = 50 * 1024 * 1024; // 50MB as reasonable estimate for iOS
+        }
+
         const percentage = quota > 0 ? (usage / quota) * 100 : 0;
 
         const newQuotaInfo = {
           usage,
           quota,
-          percentage,
+          percentage: isFinite(percentage) ? percentage : 0,
           showWarning: percentage >= QUOTA_WARNING_THRESHOLD * 100,
         };
 
@@ -94,4 +104,3 @@ export function useStorageQuota() {
     setArchiveDays,
   };
 }
-

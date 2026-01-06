@@ -23,10 +23,10 @@ const StorageQuotaBar = ({ quotaInfo, onArchiveClick, calculateDataSize, entries
           <span className="text-sm font-medium text-slate-700">Storage Usage</span>
         </div>
         <span className="text-xs text-slate-600">
-          {formatBytes(quotaInfo.usage)} / {formatBytes(quotaInfo.quota)}
+          {formatBytes(quotaInfo.usage)} / {quotaInfo.quota ? formatBytes(quotaInfo.quota) : 'Unlimited'}
           {' '}
           <span className={`font-semibold ${criticalLevel ? 'text-red-600' : warningLevel ? 'text-amber-600' : 'text-slate-600'}`}>
-            ({quotaInfo.percentage.toFixed(1)}%)
+            ({isFinite(quotaInfo.percentage) ? quotaInfo.percentage.toFixed(1) : '0'}%)
           </span>
         </span>
       </div>
