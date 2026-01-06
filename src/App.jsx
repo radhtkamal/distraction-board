@@ -7,7 +7,7 @@ import StorageQuotaBar from './components/StorageQuotaBar';
 import ArchiveModal from './components/ArchiveModal';
 
 function App() {
-  const { entries, addEntry, removeEntry, clearCategory, exportData, importData, archiveEntries, isLoading } = useIndexedDB();
+  const { entries, addEntry, removeEntry, clearCategory, toggleEntryCheck, exportData, importData, archiveEntries, isLoading } = useIndexedDB();
   const { quotaInfo, checkQuota, getArchivableEntries, calculateDataSize, archiveDays, setArchiveDays } = useStorageQuota();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [availableDates, setAvailableDates] = useState([]);
@@ -165,6 +165,7 @@ function App() {
           onAddEntry={addEntry}
           onRemoveEntry={removeEntry}
           onClearCategory={clearCategory}
+          onToggleEntry={toggleEntryCheck}
         />
 
         {/* Usage Guide */}

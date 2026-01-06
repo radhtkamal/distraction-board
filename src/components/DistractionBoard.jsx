@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Heart, BookOpen, Briefcase, Brain, Home, Plus, X } from 'lucide-react';
+import { Heart, BookOpen, Briefcase, Brain, Home, Plus, X, Check } from 'lucide-react';
 
-const DistractionBoard = ({ entries, selectedDate, onAddEntry, onRemoveEntry, onClearCategory }) => {
+const DistractionBoard = ({ entries, selectedDate, onAddEntry, onRemoveEntry, onClearCategory, onToggleEntry }) => {
   const categories = [
     { id: 'relationships', name: 'Relationships / Social', icon: Heart, color: 'bg-rose-50 border-rose-200' },
     { id: 'school', name: 'School / Learning', icon: BookOpen, color: 'bg-blue-50 border-blue-200' },
@@ -66,23 +66,53 @@ const DistractionBoard = ({ entries, selectedDate, onAddEntry, onRemoveEntry, on
 
             {/* Entries List */}
             <div className="space-y-2 mb-3 min-h-[60px]">
-              {categoryEntries.map(entry => (
-                <div 
-                  key={entry.id}
-                  className="bg-white rounded p-2.5 text-sm text-slate-700 flex items-start justify-between gap-2 group"
-                >
-                  <div className="flex-1">
-                    <p className="leading-snug">{entry.text}</p>
-                    <span className="text-xs text-slate-400 mt-1 inline-block">{entry.timestamp}</span>
-                  </div>
-                  <button
-                    onClick={() => onRemoveEntry(selectedDate, category.id, entry.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500"
+              {categoryEntries.map(entry => {
+                // Defensive: Use ?? false to handle old entries without checked property
+                const isChecked = entry.checked ?? false;
+                
+                return (
+                  <div 
+                    key={entry.id}
+                    className="bg-white rounded p-2.5 text-sm flex items-start justify-between gap-2 group"
                   >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-start gap-2 flex-1 min-w-0">
+                      {/* Checkbox Button */}
+                      <button
+                        onClick={() => onToggleEntry(selectedDate, category.id, entry.id)}
+                        className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                          isChecked
+                            ? 'bg-blue-500 border-blue-500 hover:bg-blue-600'
+                            : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
+                        }`}
+                        title={isChecked ? 'Mark as undone' : 'Mark as done'}
+                      >
+                        {isChecked && <Check className="w-3 h-3 text-white" />}
+                      </button>
+
+                      {/* Entry Text */}
+                      <div className="flex-1 min-w-0">
+                        <p className={`leading-snug break-words ${
+                          isChecked 
+                            ? 'text-slate-400 line-through' 
+                            : 'text-slate-700'
+                        }`}>
+                          {entry.text}
+                        </p>
+                        <span className="text-xs text-slate-400 mt-1 inline-block">{entry.timestamp}</span>
+                      </div>
+                    </div>
+
+                    {/* Delete Button */}
+                    <button
+                      onClick={() => onRemoveEntry(selectedDate, category.id, entry.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500 flex-shrink-0"
+                      title="Delete entry"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Add Entry Section */}

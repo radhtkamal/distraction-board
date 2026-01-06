@@ -106,6 +106,7 @@ export function useIndexedDB() {
             id: Date.now(),
             text,
             timestamp,
+            checked: false, // NEW: Default to unchecked for new entries
           },
         ],
       },
@@ -140,6 +141,44 @@ export function useIndexedDB() {
     };
 
     await saveEntries(updatedEntries);
+  };
+
+  const toggleEntryCheck = async (date, categoryId, entryId) => {
+    if (!entries[date]) {
+      console.error("Date not found in entries:", date);
+      return;
+    }
+
+    if (!entries[date][categoryId]) {
+      console.error("Category not found:", categoryId);
+      return;
+    }
+
+    const updatedEntries = {
+      ...entries,
+      [date]: {
+        ...entries[date],
+        [categoryId]: entries[date][categoryId].map((entry) => {
+          if (entry.id === entryId) {
+            // Defensive: Use ?? false to handle undefined checked property from old entries
+            const currentChecked = entry.checked ?? false;
+            const updatedEntry = { ...entry, checked: !currentChecked };
+            console.log(
+              `[Checkbox Toggle] Entry ${entryId}: ${currentChecked} -> ${!currentChecked}`
+            );
+            return updatedEntry;
+          }
+          return entry;
+        }),
+      },
+    };
+
+    try {
+      await saveEntries(updatedEntries);
+    } catch (error) {
+      console.error("Failed to toggle entry check:", error);
+      throw error;
+    }
   };
 
   const exportData = () => {
@@ -199,6 +238,7 @@ export function useIndexedDB() {
     addEntry,
     removeEntry,
     clearCategory,
+    toggleEntryCheck,
     exportData,
     importData,
     archiveEntries,
