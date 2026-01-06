@@ -12,18 +12,37 @@ const DistractionBoard = ({ entries, selectedDate, onAddEntry, onRemoveEntry, on
 
   const [newEntry, setNewEntry] = useState({});
   const [isAdding, setIsAdding] = useState({});
+  const [error, setError] = useState(null);
 
-  const handleAddEntry = (categoryId) => {
+  const handleAddEntry = async (categoryId) => {
     const text = newEntry[categoryId]?.trim();
     if (!text) return;
 
-    onAddEntry(selectedDate, categoryId, text);
-    setNewEntry({ ...newEntry, [categoryId]: '' });
-    setIsAdding({ ...isAdding, [categoryId]: false });
+    try {
+      setError(null);
+      await onAddEntry(selectedDate, categoryId, text);
+      setNewEntry({ ...newEntry, [categoryId]: '' });
+      setIsAdding({ ...isAdding, [categoryId]: false });
+    } catch (err) {
+      console.error("Error adding entry:", err);
+      if (err.message === "STORAGE_QUOTA_EXCEEDED") {
+        setError("Storage is full! Please archive old entries to make space.");
+      } else {
+        setError("Failed to save entry. Please try again.");
+      }
+      // Clear error after 5 seconds
+      setTimeout(() => setError(null), 5000);
+    }
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <>
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <p className="text-sm font-medium">⚠️ {error}</p>
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {categories.map(category => {
         const Icon = category.icon;
         const categoryEntries = entries[category.id] || [];
@@ -118,7 +137,8 @@ const DistractionBoard = ({ entries, selectedDate, onAddEntry, onRemoveEntry, on
           </div>
         );
       })}
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 const QUOTA_WARNING_THRESHOLD = 0.8; // Warn at 80% usage
 const DEFAULT_ARCHIVE_DAYS = 30; // Archive entries older than 30 days by default
+const DB_NAME = "DistractionBoardDB";
+const STORE_NAME = "entries";
 
 export function useStorageQuota() {
   const [quotaInfo, setQuotaInfo] = useState({
@@ -9,6 +11,7 @@ export function useStorageQuota() {
     quota: 0,
     percentage: 0,
     showWarning: false,
+    idbUsage: 0,
   });
   const [archiveDays, setArchiveDays] = useState(DEFAULT_ARCHIVE_DAYS);
 
@@ -26,40 +29,91 @@ export function useStorageQuota() {
     return false;
   };
 
-  // Check storage quota
-  const checkQuota = async () => {
+  // Get actual IndexedDB usage by checking database size
+  const getIndexedDBUsage = async () => {
     try {
+      const timeoutPromise = new Promise((resolve) => {
+        setTimeout(() => resolve(0), 1000); // 1 second timeout
+      });
+
+      const idbPromise = (async () => {
+        try {
+          const db = await new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+          });
+
+          return new Promise((resolve) => {
+            try {
+              const transaction = db.transaction([STORE_NAME], "readonly");
+              const store = transaction.objectStore(STORE_NAME);
+              const request = store.get("all-entries");
+
+              request.onsuccess = () => {
+                const entry = request.result;
+                db.close();
+                if (entry?.data) {
+                  const size = new Blob([JSON.stringify(entry.data)]).size;
+                  resolve(size);
+                } else {
+                  resolve(0);
+                }
+              };
+
+              request.onerror = () => {
+                db.close();
+                resolve(0);
+              };
+            } catch (e) {
+              db.close();
+              resolve(0);
+            }
+          });
+        } catch (error) {
+          return 0;
+        }
+      })();
+
+      return Promise.race([idbPromise, timeoutPromise]);
+    } catch (error) {
+      console.warn("Could not calculate IndexedDB usage:", error);
+      return 0;
+    }
+  };
+
+  // Check storage quota
+  const checkQuota = useCallback(async () => {
+    try {
+      const idbUsage = await getIndexedDBUsage();
+
       if (navigator.storage && navigator.storage.estimate) {
         const estimate = await navigator.storage.estimate();
-        let usage = estimate.usage || 0;
+        let usage = estimate.usage || idbUsage;
         let quota = estimate.quota || 0;
+        let quotaSource = "API";
 
-        // iOS Safari fallback: if quota is not available, estimate based on usage
-        // Typically iOS PWAs get ~50MB of storage
         if (quota === 0 || quota === undefined) {
-          console.warn(
-            "Storage quota not available, using estimated value for iOS"
-          );
-          quota = 50 * 1024 * 1024; // 50MB as reasonable estimate for iOS
+          quota = 50 * 1024 * 1024;
+          quotaSource = "iOS_FALLBACK";
         }
 
+        usage = Math.max(usage, idbUsage);
         const percentage = quota > 0 ? (usage / quota) * 100 : 0;
 
-        const newQuotaInfo = {
+        setQuotaInfo({
           usage,
           quota,
           percentage: isFinite(percentage) ? percentage : 0,
           showWarning: percentage >= QUOTA_WARNING_THRESHOLD * 100,
-        };
-
-        setQuotaInfo(newQuotaInfo);
-        return newQuotaInfo;
+          idbUsage,
+          quotaSource,
+        });
       }
     } catch (error) {
       console.error("Failed to check storage quota:", error);
     }
-    return quotaInfo;
-  };
+  }, []);
 
   // Get entries to archive (older than X days)
   const getArchivableEntries = (entries, days = archiveDays) => {
@@ -87,10 +141,9 @@ export function useStorageQuota() {
     return new Blob([jsonStr]).size;
   };
 
-  // Check quota on mount
+  // Check quota on mount only
   useEffect(() => {
     checkQuota();
-    // Request persistent storage on first load
     requestPersistentStorage();
   }, []);
 

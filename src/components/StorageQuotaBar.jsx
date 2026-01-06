@@ -3,7 +3,8 @@ import { AlertCircle, HardDrive } from 'lucide-react';
 
 const StorageQuotaBar = ({ quotaInfo, onArchiveClick, calculateDataSize, entries }) => {
   const formatBytes = (bytes) => {
-    if (bytes === 0) return '0 B';
+    if (!bytes || bytes === 0) return '0 B';
+    if (!isFinite(bytes)) return 'N/A';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -23,10 +24,10 @@ const StorageQuotaBar = ({ quotaInfo, onArchiveClick, calculateDataSize, entries
           <span className="text-sm font-medium text-slate-700">Storage Usage</span>
         </div>
         <span className="text-xs text-slate-600">
-          {formatBytes(quotaInfo.usage)} / {quotaInfo.quota ? formatBytes(quotaInfo.quota) : 'Unlimited'}
+          {formatBytes(quotaInfo.usage)} / {formatBytes(quotaInfo.quota)}
           {' '}
           <span className={`font-semibold ${criticalLevel ? 'text-red-600' : warningLevel ? 'text-amber-600' : 'text-slate-600'}`}>
-            ({isFinite(quotaInfo.percentage) ? quotaInfo.percentage.toFixed(1) : '0'}%)
+            ({quotaInfo.percentage.toFixed(1)}%)
           </span>
         </span>
       </div>

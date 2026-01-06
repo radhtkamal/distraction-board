@@ -71,9 +71,14 @@ export function useIndexedDB() {
         resolve();
       };
 
-      request.onerror = () => {
-        console.error("Failed to save entries");
-        reject();
+      request.onerror = (error) => {
+        console.error("Failed to save entries:", error);
+        // Check if it's a quota exceeded error
+        if (error.target.error?.name === "QuotaExceededError") {
+          reject(new Error("STORAGE_QUOTA_EXCEEDED"));
+        } else {
+          reject(error);
+        }
       };
     });
   };
