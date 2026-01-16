@@ -99,6 +99,7 @@ export function useIndexedDB() {
           work: [],
           emotional: [],
           life: [],
+          upskilling: [],
         }),
         [categoryId]: [
           ...(entries[date]?.[categoryId] || []),
@@ -107,6 +108,7 @@ export function useIndexedDB() {
             text,
             timestamp,
             checked: false, // NEW: Default to unchecked for new entries
+            subEntries: [], // Initialize empty sub-entries array
           },
         ],
       },
@@ -162,9 +164,21 @@ export function useIndexedDB() {
           if (entry.id === entryId) {
             // Defensive: Use ?? false to handle undefined checked property from old entries
             const currentChecked = entry.checked ?? false;
-            const updatedEntry = { ...entry, checked: !currentChecked };
+            const newCheckedState = !currentChecked;
+            
+            // When toggling main entry, also toggle all sub-entries
+            const subEntries = (entry.subEntries ?? []).map(subEntry => ({
+              ...subEntry,
+              checked: newCheckedState
+            }));
+            
+            const updatedEntry = { 
+              ...entry, 
+              checked: newCheckedState,
+              subEntries
+            };
             console.log(
-              `[Checkbox Toggle] Entry ${entryId}: ${currentChecked} -> ${!currentChecked}`
+              `[Checkbox Toggle] Entry ${entryId}: ${currentChecked} -> ${newCheckedState}`
             );
             return updatedEntry;
           }
@@ -233,12 +247,121 @@ export function useIndexedDB() {
     await saveEntries(mergedEntries);
   };
 
+  const addSubEntry = async (date, categoryId, entryId, text) => {
+    if (!entries[date] || !entries[date][categoryId]) {
+      console.error("Date or category not found");
+      return;
+    }
+
+    const timestamp = new Date().toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    const updatedEntries = {
+      ...entries,
+      [date]: {
+        ...entries[date],
+        [categoryId]: entries[date][categoryId].map((entry) => {
+          if (entry.id === entryId) {
+            const subEntries = (entry.subEntries ?? []) || [];
+            return {
+              ...entry,
+              subEntries: [
+                ...subEntries,
+                {
+                  id: Date.now(),
+                  text,
+                  timestamp,
+                  checked: false,
+                },
+              ],
+            };
+          }
+          return entry;
+        }),
+      },
+    };
+
+    await saveEntries(updatedEntries);
+  };
+
+  const removeSubEntry = async (date, categoryId, entryId, subEntryId) => {
+    if (!entries[date] || !entries[date][categoryId]) {
+      console.error("Date or category not found");
+      return;
+    }
+
+    const updatedEntries = {
+      ...entries,
+      [date]: {
+        ...entries[date],
+        [categoryId]: entries[date][categoryId].map((entry) => {
+          if (entry.id === entryId) {
+            const subEntries = (entry.subEntries ?? []) || [];
+            return {
+              ...entry,
+              subEntries: subEntries.filter((subEntry) => subEntry.id !== subEntryId),
+            };
+          }
+          return entry;
+        }),
+      },
+    };
+
+    await saveEntries(updatedEntries);
+  };
+
+  const toggleSubEntryCheck = async (date, categoryId, entryId, subEntryId) => {
+    if (!entries[date] || !entries[date][categoryId]) {
+      console.error("Date or category not found");
+      return;
+    }
+
+    const updatedEntries = {
+      ...entries,
+      [date]: {
+        ...entries[date],
+        [categoryId]: entries[date][categoryId].map((entry) => {
+          if (entry.id === entryId) {
+            const subEntries = (entry.subEntries ?? []) || [];
+            return {
+              ...entry,
+              subEntries: subEntries.map((subEntry) => {
+                if (subEntry.id === subEntryId) {
+                  const currentChecked = subEntry.checked ?? false;
+                  console.log(
+                    `[Sub-entry Toggle] SubEntry ${subEntryId}: ${currentChecked} -> ${!currentChecked}`
+                  );
+                  return { ...subEntry, checked: !currentChecked };
+                }
+                return subEntry;
+              }),
+            };
+          }
+          return entry;
+        }),
+      },
+    };
+
+    try {
+      await saveEntries(updatedEntries);
+    } catch (error) {
+      console.error("Failed to toggle sub-entry check:", error);
+      throw error;
+    }
+  };
+
   return {
     entries,
     addEntry,
     removeEntry,
     clearCategory,
     toggleEntryCheck,
+    addSubEntry,
+    removeSubEntry,
+    toggleSubEntryCheck,
     exportData,
     importData,
     archiveEntries,

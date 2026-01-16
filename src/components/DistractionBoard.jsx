@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
-import { Heart, BookOpen, Briefcase, Brain, Home, Plus, X, Check } from 'lucide-react';
+import { Heart, BookOpen, Briefcase, Brain, Home, Plus, X, Check, ChevronDown, Zap } from 'lucide-react';
 
-const DistractionBoard = ({ entries, selectedDate, onAddEntry, onRemoveEntry, onClearCategory, onToggleEntry }) => {
+const DistractionBoard = ({ entries, selectedDate, onAddEntry, onRemoveEntry, onClearCategory, onToggleEntry, onAddSubEntry, onRemoveSubEntry, onToggleSubEntry }) => {
   const categories = [
     { id: 'relationships', name: 'Relationships / Social', icon: Heart, color: 'bg-rose-50 border-rose-200' },
     { id: 'school', name: 'School / Learning', icon: BookOpen, color: 'bg-blue-50 border-blue-200' },
     { id: 'work', name: 'Work / Career', icon: Briefcase, color: 'bg-purple-50 border-purple-200' },
     { id: 'emotional', name: 'Emotional / Mental', icon: Brain, color: 'bg-amber-50 border-amber-200' },
-    { id: 'life', name: 'Life Admin', icon: Home, color: 'bg-green-50 border-green-200' }
+    { id: 'life', name: 'Life Admin', icon: Home, color: 'bg-green-50 border-green-200' },
+    { id: 'upskilling', name: 'Upskilling', icon: Zap, color: 'bg-orange-50 border-orange-200' }
   ];
 
   const [newEntry, setNewEntry] = useState({});
   const [isAdding, setIsAdding] = useState({});
   const [error, setError] = useState(null);
+  const [expandedEntries, setExpandedEntries] = useState({});
+  const [addingSubEntry, setAddingSubEntry] = useState({});
+  const [newSubEntry, setNewSubEntry] = useState({});
 
   const handleAddEntry = async (categoryId) => {
     const text = newEntry[categoryId]?.trim();
@@ -33,6 +37,32 @@ const DistractionBoard = ({ entries, selectedDate, onAddEntry, onRemoveEntry, on
       // Clear error after 5 seconds
       setTimeout(() => setError(null), 5000);
     }
+  };
+
+  const handleAddSubEntry = async (categoryId, entryId) => {
+    const text = newSubEntry[`${categoryId}-${entryId}`]?.trim();
+    if (!text) return;
+
+    try {
+      setError(null);
+      await onAddSubEntry(selectedDate, categoryId, entryId, text);
+      setNewSubEntry({ ...newSubEntry, [`${categoryId}-${entryId}`]: '' });
+      setAddingSubEntry({ ...addingSubEntry, [`${categoryId}-${entryId}`]: false });
+    } catch (err) {
+      console.error("Error adding sub-entry:", err);
+      if (err.message === "STORAGE_QUOTA_EXCEEDED") {
+        setError("Storage is full! Please archive old entries to make space.");
+      } else {
+        setError("Failed to save sub-entry. Please try again.");
+      }
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  const toggleExpanded = (categoryId, entryId) => {
+    const key = `${categoryId}-${entryId}`;
+    console.log(`[toggleExpanded] Key: ${key}, Current value: ${expandedEntries[key]}, New value: ${!expandedEntries[key]}`);
+    setExpandedEntries({ ...expandedEntries, [key]: !expandedEntries[key] });
   };
 
   return (
@@ -69,47 +99,167 @@ const DistractionBoard = ({ entries, selectedDate, onAddEntry, onRemoveEntry, on
               {categoryEntries.map(entry => {
                 // Defensive: Use ?? false to handle old entries without checked property
                 const isChecked = entry.checked ?? false;
+                const subEntries = entry.subEntries ?? [];
+                const hasSubEntries = subEntries.length > 0;
+                const isExpandedKey = `${category.id}-${entry.id}`;
+                const isExpanded = expandedEntries[isExpandedKey];
                 
                 return (
-                  <div 
-                    key={entry.id}
-                    className="bg-white rounded p-2.5 text-sm flex items-start justify-between gap-2 group"
-                  >
-                    <div className="flex items-start gap-2 flex-1 min-w-0">
-                      {/* Checkbox Button */}
-                      <button
-                        onClick={() => onToggleEntry(selectedDate, category.id, entry.id)}
-                        className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                          isChecked
-                            ? 'bg-blue-500 border-blue-500 hover:bg-blue-600'
-                            : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
-                        }`}
-                        title={isChecked ? 'Mark as undone' : 'Mark as done'}
-                      >
-                        {isChecked && <Check className="w-3 h-3 text-white" />}
-                      </button>
+                  <div key={entry.id}>
+                    {/* Main Entry */}
+                    <div 
+                      className="bg-white rounded p-2.5 text-sm flex items-start justify-between gap-2 group"
+                    >
+                      <div className="flex items-start gap-2 flex-1 min-w-0">
+                        {/* Checkbox Button */}
+                        <button
+                          onClick={() => onToggleEntry(selectedDate, category.id, entry.id)}
+                          className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                            isChecked
+                              ? 'bg-blue-500 border-blue-500 hover:bg-blue-600'
+                              : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
+                          }`}
+                          title={isChecked ? 'Mark as undone' : 'Mark as done'}
+                        >
+                          {isChecked && <Check className="w-3 h-3 text-white" />}
+                        </button>
 
-                      {/* Entry Text */}
-                      <div className="flex-1 min-w-0">
-                        <p className={`leading-snug break-words ${
-                          isChecked 
-                            ? 'text-slate-400 line-through' 
-                            : 'text-slate-700'
-                        }`}>
-                          {entry.text}
-                        </p>
-                        <span className="text-xs text-slate-400 mt-1 inline-block">{entry.timestamp}</span>
+                        {/* Entry Text and Expand Button */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            {/* Expand/Collapse Button */}
+                            <button
+                              onClick={() => toggleExpanded(category.id, entry.id)}
+                              className="flex-shrink-0 p-0 text-slate-500 hover:text-slate-700 transition-colors"
+                              title={isExpanded ? 'Hide sub-entries' : 'Show sub-entries'}
+                            >
+                              <ChevronDown 
+                                className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                              />
+                            </button>
+                            <p className={`leading-snug break-words ${
+                              isChecked 
+                                ? 'text-slate-400 line-through' 
+                                : 'text-slate-700'
+                            }`}>
+                              {entry.text}
+                            </p>
+                          </div>
+                          <span className="text-xs text-slate-400 mt-1 inline-block">{entry.timestamp}</span>
+                        </div>
                       </div>
+
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => onRemoveEntry(selectedDate, category.id, entry.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500 flex-shrink-0"
+                        title="Delete entry"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
 
-                    {/* Delete Button */}
-                    <button
-                      onClick={() => onRemoveEntry(selectedDate, category.id, entry.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500 flex-shrink-0"
-                      title="Delete entry"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    {/* Sub-entries Section */}
+                    {isExpanded && (
+                      <div className={`mt-2 rounded ${
+                        category.id === 'relationships' ? 'bg-rose-100' :
+                        category.id === 'school' ? 'bg-blue-100' :
+                        category.id === 'work' ? 'bg-purple-100' :
+                        category.id === 'emotional' ? 'bg-amber-100' :
+                        category.id === 'life' ? 'bg-green-100' :
+                        category.id === 'upskilling' ? 'bg-orange-100' :
+                        'bg-slate-100'
+                      }`}>
+                        <div className="ml-6 space-y-1.5 p-2.5">
+                        {/* Existing Sub-entries */}
+                        {subEntries.map(subEntry => {
+                          const subIsChecked = subEntry.checked ?? false;
+                          return (
+                            <div
+                              key={subEntry.id}
+                              className="bg-white rounded p-2 text-xs flex items-start justify-between gap-2 group"
+                            >
+                              <div className="flex items-start gap-2 flex-1 min-w-0">
+                                {/* Sub-entry Checkbox */}
+                                <button
+                                  onClick={() => onToggleSubEntry(selectedDate, category.id, entry.id, subEntry.id)}
+                                  className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                                    subIsChecked
+                                      ? 'bg-blue-500 border-blue-500 hover:bg-blue-600'
+                                      : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
+                                  }`}
+                                  title={subIsChecked ? 'Mark as undone' : 'Mark as done'}
+                                >
+                                  {subIsChecked && <Check className="w-2.5 h-2.5 text-white" />}
+                                </button>
+
+                                {/* Sub-entry Text */}
+                                <div className="flex-1 min-w-0">
+                                  <p className={`leading-snug break-words ${
+                                    subIsChecked 
+                                      ? 'text-slate-400 line-through' 
+                                      : 'text-slate-700'
+                                  }`}>
+                                    {subEntry.text}
+                                  </p>
+                                  <span className="text-xs text-slate-400 mt-0.5 inline-block">{subEntry.timestamp}</span>
+                                </div>
+                              </div>
+
+                              {/* Sub-entry Delete Button */}
+                              <button
+                                onClick={() => onRemoveSubEntry(selectedDate, category.id, entry.id, subEntry.id)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500 flex-shrink-0"
+                                title="Delete sub-entry"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          );
+                        })}
+
+                        {/* Add Sub-entry Section */}
+                        {addingSubEntry[`${category.id}-${entry.id}`] ? (
+                          <div className="space-y-1.5 mt-2">
+                            <input
+                              type="text"
+                              placeholder="Add sub-entry..."
+                              value={newSubEntry[`${category.id}-${entry.id}`] || ''}
+                              onChange={(e) => setNewSubEntry({ ...newSubEntry, [`${category.id}-${entry.id}`]: e.target.value })}
+                              onKeyPress={(e) => e.key === 'Enter' && handleAddSubEntry(category.id, entry.id)}
+                              className="w-full px-2 py-1.5 text-xs text-slate-900 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                              autoFocus
+                            />
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => handleAddSubEntry(category.id, entry.id)}
+                                className="flex-1 px-2 py-1 bg-slate-700 text-white text-xs rounded hover:bg-slate-800 transition-colors"
+                              >
+                                Add
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setAddingSubEntry({ ...addingSubEntry, [`${category.id}-${entry.id}`]: false });
+                                  setNewSubEntry({ ...newSubEntry, [`${category.id}-${entry.id}`]: '' });
+                                }}
+                                className="px-2 py-1 bg-slate-200 text-slate-700 text-xs rounded hover:bg-slate-300 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setAddingSubEntry({ ...addingSubEntry, [`${category.id}-${entry.id}`]: true })}
+                            className="w-full flex items-center justify-center gap-1 px-2 py-1.5 bg-white border border-slate-300 text-slate-700 text-xs rounded hover:bg-slate-50 transition-colors mt-1"
+                          >
+                            <Plus className="w-3 h-3" />
+                            Add sub-entry
+                          </button>
+                        )}
+                      </div>
+                        </div>
+                    )}
                   </div>
                 );
               })}
