@@ -84,11 +84,13 @@ export function useIndexedDB() {
   };
 
   const addEntry = async (date, categoryId, text) => {
-    const timestamp = new Date().toLocaleTimeString("en-US", {
+    const now = new Date();
+    const timestamp = now.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
     });
+    const createdDate = now.toISOString().split("T")[0];
 
     const updatedEntries = {
       ...entries,
@@ -107,6 +109,7 @@ export function useIndexedDB() {
             id: Date.now(),
             text,
             timestamp,
+            createdDate,
             checked: false, // NEW: Default to unchecked for new entries
             subEntries: [], // Initialize empty sub-entries array
           },
@@ -166,15 +169,38 @@ export function useIndexedDB() {
             const currentChecked = entry.checked ?? false;
             const newCheckedState = !currentChecked;
             
+            // Generate completion timestamps when checking, clear when unchecking
+            const now = new Date();
+            const completedDate = newCheckedState ? now.toISOString().split("T")[0] : undefined;
+            const completedTime = newCheckedState ? now.toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            }) : undefined;
+            
             // When toggling main entry, also toggle all sub-entries
-            const subEntries = (entry.subEntries ?? []).map(subEntry => ({
-              ...subEntry,
-              checked: newCheckedState
-            }));
+            const subEntries = (entry.subEntries ?? []).map(subEntry => {
+              const subNow = new Date();
+              const subCompletedDate = newCheckedState ? subNow.toISOString().split("T")[0] : undefined;
+              const subCompletedTime = newCheckedState ? subNow.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              }) : undefined;
+              
+              return {
+                ...subEntry,
+                checked: newCheckedState,
+                completedDate: subCompletedDate,
+                completedTime: subCompletedTime,
+              };
+            });
             
             const updatedEntry = { 
               ...entry, 
               checked: newCheckedState,
+              completedDate,
+              completedTime,
               subEntries
             };
             console.log(
@@ -253,11 +279,13 @@ export function useIndexedDB() {
       return;
     }
 
-    const timestamp = new Date().toLocaleTimeString("en-US", {
+    const now = new Date();
+    const timestamp = now.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
     });
+    const createdDate = now.toISOString().split("T")[0];
 
     const updatedEntries = {
       ...entries,
@@ -274,6 +302,7 @@ export function useIndexedDB() {
                   id: Date.now(),
                   text,
                   timestamp,
+                  createdDate,
                   checked: false,
                 },
               ],
@@ -331,10 +360,26 @@ export function useIndexedDB() {
               subEntries: subEntries.map((subEntry) => {
                 if (subEntry.id === subEntryId) {
                   const currentChecked = subEntry.checked ?? false;
+                  const newCheckedState = !currentChecked;
+                  
+                  // Generate completion timestamps when checking, clear when unchecking
+                  const now = new Date();
+                  const completedDate = newCheckedState ? now.toISOString().split("T")[0] : undefined;
+                  const completedTime = newCheckedState ? now.toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  }) : undefined;
+                  
                   console.log(
-                    `[Sub-entry Toggle] SubEntry ${subEntryId}: ${currentChecked} -> ${!currentChecked}`
+                    `[Sub-entry Toggle] SubEntry ${subEntryId}: ${currentChecked} -> ${newCheckedState}`
                   );
-                  return { ...subEntry, checked: !currentChecked };
+                  return { 
+                    ...subEntry, 
+                    checked: newCheckedState,
+                    completedDate,
+                    completedTime,
+                  };
                 }
                 return subEntry;
               }),

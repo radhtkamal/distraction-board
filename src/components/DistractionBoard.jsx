@@ -145,7 +145,22 @@ const DistractionBoard = ({ entries, selectedDate, onAddEntry, onRemoveEntry, on
                               {entry.text}
                             </p>
                           </div>
-                          <span className="text-xs text-slate-400 mt-1 inline-block">{entry.timestamp}</span>
+                          <div className="flex items-center justify-between gap-2 mt-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-400">
+                                {entry.createdDate && new Date(entry.createdDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                              <span className="text-xs text-slate-400">{entry.timestamp}</span>
+                            </div>
+                            {isChecked && entry.completedDate && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-green-600">
+                                  {new Date(entry.completedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </span>
+                                <span className="text-xs text-green-600">{entry.completedTime}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -202,7 +217,22 @@ const DistractionBoard = ({ entries, selectedDate, onAddEntry, onRemoveEntry, on
                                   }`}>
                                     {subEntry.text}
                                   </p>
-                                  <span className="text-xs text-slate-400 mt-0.5 inline-block">{subEntry.timestamp}</span>
+                                  <div className="flex items-center justify-between gap-2 mt-0.5">
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-xs text-slate-400">
+                                        {subEntry.createdDate && new Date(subEntry.createdDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                      </span>
+                                      <span className="text-xs text-slate-400">{subEntry.timestamp}</span>
+                                    </div>
+                                    {subIsChecked && subEntry.completedDate && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs text-green-600">
+                                          {new Date(subEntry.completedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                        </span>
+                                        <span className="text-xs text-green-600">{subEntry.completedTime}</span>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
 
