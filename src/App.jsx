@@ -15,6 +15,11 @@ function App() {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
 
   useEffect(() => {
+    // Set page title
+    document.title = 'Distraction Board';
+  }, []);
+
+  useEffect(() => {
     // Get all available dates from localStorage
     const dates = Object.keys(entries).sort().reverse();
     setAvailableDates(dates);
@@ -113,7 +118,10 @@ function App() {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-800 mb-2">Distraction Board</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <img src="/favicon.png" alt="Distraction Board" className="w-10 h-10" />
+            <h1 className="text-4xl font-bold text-slate-800">Distraction Board</h1>
+          </div>
           <p className="text-slate-600">Capture intrusive thoughts during work. Review once daily outside work hours.</p>
           
           {/* Date Navigation & Stats */}
@@ -215,6 +223,11 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Footer */}
+      <footer className="mt-12 pb-8 text-center text-sm text-slate-500">
+        <p>Made with ❤️ by Radh Kamal • January 1, 2026</p>
+      </footer>
 
       {/* Archive Modal */}
       <ArchiveModal
