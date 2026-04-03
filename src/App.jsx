@@ -119,7 +119,7 @@ function App() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <img src="/favicon.png" alt="Distraction Board" className="w-10 h-10" />
+            <img src="/favicon.svg" alt="Distraction Board" className="w-10 h-10" />
             <h1 className="text-4xl font-bold text-slate-800">Distraction Board</h1>
           </div>
           <p className="text-slate-600">Capture intrusive thoughts during work. Review once daily outside work hours.</p>

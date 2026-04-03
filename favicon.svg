@@ -1,0 +1,56 @@
+<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="slateBlueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#475569;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background rounded rectangle - pastel blue -->
+  <rect x="8" y="8" width="240" height="240" rx="24" fill="#e0f2fe"/>
+  
+  <!-- Colored grid cells matching category colors -->
+  <!-- Row 1 -->
+  <rect x="18" y="18" width="67" height="67" fill="#ffe4e6"/>
+  <rect x="85" y="18" width="86" height="67" fill="#e0f2fe"/>
+  <rect x="171" y="18" width="67" height="67" fill="#f3e8ff"/>
+  
+  <!-- Row 2 -->
+  <rect x="18" y="85" width="67" height="86" fill="#fef3c7"/>
+  <rect x="85" y="85" width="86" height="86" fill="#dcfce7"/>
+  <rect x="171" y="85" width="67" height="86" fill="#ffedd5"/>
+  
+  <!-- Row 3 -->
+  <rect x="18" y="171" width="67" height="67" fill="#ffe4e6"/>
+  <rect x="85" y="171" width="86" height="67" fill="#e0f2fe"/>
+  <rect x="171" y="171" width="67" height="67" fill="#f3e8ff"/>
+  
+  <!-- 3x3 Grid Structure - lines -->
+  <g id="grid" stroke-width="4.5" stroke="#64748b" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Vertical lines -->
+    <line x1="85" y1="18" x2="85" y2="238"/>
+    <line x1="171" y1="18" x2="171" y2="238"/>
+    
+    <!-- Horizontal lines -->
+    <line x1="18" y1="85" x2="238" y2="85"/>
+    <line x1="18" y1="171" x2="238" y2="171"/>
+    
+    <!-- Outer border with rounded corners - slate color -->
+    <path d="M 28 18 L 228 18 Q 238 18 238 28 L 238 228 Q 238 238 228 238 L 28 238 Q 18 238 18 228 L 18 28 Q 18 18 28 18 Z" fill="none" stroke="#64748b" stroke-width="5"/>
+  </g>
+  
+  <!-- Lightbulb icon in center cell with blue accent - BIGGER and CENTERED -->
+  <!-- Positioned at center (128, 128) -->
+  
+  <!-- Bulb body (filled, blue) - even bigger -->
+  <circle cx="128" cy="128" r="28" fill="#3b82f6"/>
+  
+  <!-- Light accent on top of bulb -->
+  <ellipse cx="128" cy="102" rx="13" ry="9" fill="#60a5fa" opacity="0.7"/>
+  
+  <!-- Base/socket (slate color) -->
+  <rect x="119" y="157" width="18" height="11" rx="2" fill="#64748b"/>
+  
+  <!-- Checkmark in bulb (white for visibility) -->
+  <path d="M 118 128 L 123 133 L 137 119" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
